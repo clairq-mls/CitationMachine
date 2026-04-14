@@ -1,0 +1,2097 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Citation Builder — MLA, APA & Chicago</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+<script src="https://unpkg.com/docx@8.5.0/build/index.js"></script>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --primary: #2563eb;
+    --primary-dark: #1d4ed8;
+    --primary-light: #eff6ff;
+    --surface: #ffffff;
+    --bg: #f8fafc;
+    --border: #e2e8f0;
+    --text: #1e293b;
+    --muted: #64748b;
+    --success: #10b981;
+    --danger: #ef4444;
+    --warning: #f59e0b;
+    --radius: 8px;
+    --shadow: 0 1px 3px rgba(0,0,0,0.1), 0 1px 2px rgba(0,0,0,0.06);
+    --shadow-md: 0 4px 6px rgba(0,0,0,0.07), 0 2px 4px rgba(0,0,0,0.06);
+  }
+
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.6;
+    min-height: 100vh;
+  }
+
+  .app-header {
+    background: var(--primary);
+    color: white;
+    padding: 20px 24px;
+    text-align: center;
+  }
+  .app-header h1 { font-size: 1.75rem; font-weight: 700; margin-bottom: 4px; }
+  .app-header p { opacity: 0.85; font-size: 0.95rem; }
+
+  .container { max-width: 900px; margin: 0 auto; padding: 24px 16px 60px; }
+
+  /* Step cards */
+  .step-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+    margin-bottom: 20px;
+    overflow: hidden;
+  }
+  .step-header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 16px 20px;
+    border-bottom: 1px solid var(--border);
+    background: #fafbfc;
+  }
+  .step-num {
+    width: 30px; height: 30px;
+    border-radius: 50%;
+    background: var(--primary);
+    color: white;
+    font-weight: 700;
+    font-size: 0.9rem;
+    display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0;
+  }
+  .step-header h2 { font-size: 1rem; font-weight: 600; }
+  .step-body { padding: 20px; }
+
+  /* Format buttons */
+  .format-grid {
+    display: flex;
+    gap: 12px;
+    flex-wrap: wrap;
+  }
+  .format-btn {
+    flex: 1;
+    min-width: 180px;
+    padding: 16px 20px;
+    border: 2px solid var(--border);
+    border-radius: var(--radius);
+    background: var(--surface);
+    cursor: pointer;
+    transition: all 0.15s;
+    text-align: left;
+  }
+  .format-btn:hover { border-color: var(--primary); background: var(--primary-light); }
+  .format-btn.active { border-color: var(--primary); background: var(--primary-light); }
+  .format-btn .fmt-name { font-weight: 700; font-size: 1.1rem; color: var(--primary); }
+  .format-btn .fmt-desc { font-size: 0.8rem; color: var(--muted); margin-top: 2px; }
+
+  /* Source type grid */
+  .source-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 10px;
+  }
+  @media (max-width: 600px) { .source-grid { grid-template-columns: repeat(2, 1fr); } }
+  .source-btn {
+    border: 2px solid var(--border);
+    border-radius: var(--radius);
+    background: var(--surface);
+    cursor: pointer;
+    padding: 14px 8px;
+    text-align: center;
+    transition: all 0.15s;
+    display: flex; flex-direction: column; align-items: center; gap: 8px;
+  }
+  .source-btn:hover { border-color: var(--primary); background: var(--primary-light); }
+  .source-btn.active { border-color: var(--primary); background: var(--primary-light); }
+  .source-btn .src-icon { font-size: 1.5rem; }
+  .source-btn .src-label { font-size: 0.78rem; font-weight: 600; color: var(--text); line-height: 1.2; }
+
+  /* Form */
+  .form-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 14px;
+  }
+  @media (max-width: 580px) { .form-grid { grid-template-columns: 1fr; } }
+  .field-group { display: flex; flex-direction: column; gap: 4px; }
+  .field-group.full-width { grid-column: 1 / -1; }
+  .field-label {
+    font-size: 0.82rem;
+    font-weight: 600;
+    color: var(--text);
+    display: flex; align-items: center; gap: 5px;
+  }
+  .field-label .req { color: var(--danger); }
+  .field-hint { font-size: 0.75rem; color: var(--muted); font-weight: 400; }
+  input[type="text"], select {
+    width: 100%;
+    padding: 8px 10px;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    font-size: 0.9rem;
+    color: var(--text);
+    background: var(--surface);
+    transition: border-color 0.15s;
+    font-family: inherit;
+  }
+  input[type="text"]:focus, select:focus {
+    outline: none;
+    border-color: var(--primary);
+    box-shadow: 0 0 0 3px rgba(37,99,235,0.12);
+  }
+  input.error { border-color: var(--danger); }
+  .field-error { font-size: 0.75rem; color: var(--danger); margin-top: 2px; }
+
+  /* Authors block */
+  .authors-block { grid-column: 1 / -1; }
+  .authors-label-row {
+    display: flex; align-items: center; justify-content: space-between;
+    margin-bottom: 8px;
+  }
+  .author-rows { display: flex; flex-direction: column; gap: 6px; }
+  .author-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr auto;
+    gap: 6px;
+    align-items: center;
+  }
+  .btn-icon {
+    width: 30px; height: 30px;
+    border-radius: 6px;
+    border: 1px solid var(--border);
+    background: var(--surface);
+    cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 0.85rem;
+    transition: all 0.15s;
+    flex-shrink: 0;
+  }
+  .btn-icon.remove { color: var(--danger); }
+  .btn-icon.remove:hover { background: #fef2f2; border-color: var(--danger); }
+  .btn-add-author {
+    display: inline-flex; align-items: center; gap: 5px;
+    padding: 5px 10px;
+    border: 1px dashed var(--primary);
+    border-radius: 6px;
+    background: none;
+    color: var(--primary);
+    font-size: 0.8rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.15s;
+    margin-top: 4px;
+  }
+  .btn-add-author:hover { background: var(--primary-light); }
+
+  /* Buttons */
+  .btn {
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 9px 18px;
+    border-radius: 6px;
+    border: none;
+    font-size: 0.9rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.15s;
+    font-family: inherit;
+  }
+  .btn-primary { background: var(--primary); color: white; }
+  .btn-primary:hover { background: var(--primary-dark); }
+  .btn-secondary { background: var(--surface); color: var(--text); border: 1px solid var(--border); }
+  .btn-secondary:hover { background: var(--bg); }
+  .btn-success { background: var(--success); color: white; }
+  .btn-success:hover { background: #059669; }
+  .btn-danger { background: var(--danger); color: white; }
+  .btn-danger:hover { background: #dc2626; }
+  .btn-sm { padding: 5px 10px; font-size: 0.8rem; }
+
+  /* Preview */
+  .preview-box {
+    border-radius: var(--radius);
+    padding: 16px;
+    margin-bottom: 12px;
+  }
+  .preview-box.bib { background: #f0fdf4; border: 1px solid #bbf7d0; }
+  .preview-box.intext { background: #eff6ff; border: 1px solid #bfdbfe; }
+  .preview-box.footnote { background: #fdf4ff; border: 1px solid #e9d5ff; }
+  .preview-box.short-note { background: #fffbeb; border: 1px solid #fde68a; }
+  .preview-label {
+    font-size: 0.75rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--muted);
+    margin-bottom: 6px;
+  }
+  .preview-text {
+    font-size: 0.92rem;
+    line-height: 1.7;
+  }
+  .preview-actions {
+    display: flex; gap: 10px; align-items: center; flex-wrap: wrap;
+    margin-top: 16px;
+    padding-top: 16px;
+    border-top: 1px solid var(--border);
+  }
+
+  /* Citations list */
+  .citations-header {
+    display: flex; align-items: center; justify-content: space-between;
+    flex-wrap: wrap; gap: 8px;
+    margin-bottom: 14px;
+  }
+  .citations-count {
+    font-size: 0.85rem;
+    color: var(--muted);
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    padding: 3px 10px;
+    font-weight: 600;
+  }
+  .citation-item {
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 14px 16px;
+    margin-bottom: 10px;
+    background: var(--surface);
+    position: relative;
+  }
+  .citation-item-header {
+    display: flex; align-items: flex-start; justify-content: space-between;
+    gap: 10px;
+    margin-bottom: 8px;
+  }
+  .source-badge {
+    font-size: 0.7rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    padding: 2px 7px;
+    border-radius: 4px;
+    background: var(--primary-light);
+    color: var(--primary);
+    flex-shrink: 0;
+  }
+  .citation-bib { font-size: 0.88rem; line-height: 1.65; }
+  .citation-sub {
+    font-size: 0.8rem;
+    color: var(--muted);
+    margin-top: 5px;
+  }
+  .citation-sub strong { color: var(--text); }
+
+  /* Export section */
+  .export-section {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 20px;
+    margin-top: 20px;
+  }
+  .export-section h3 { font-size: 1rem; font-weight: 700; margin-bottom: 4px; }
+  .export-note {
+    font-size: 0.8rem;
+    color: var(--muted);
+    margin-bottom: 14px;
+    line-height: 1.5;
+  }
+  .export-actions { display: flex; gap: 10px; flex-wrap: wrap; }
+  .tip-box {
+    background: #fffbeb;
+    border: 1px solid #fde68a;
+    border-radius: 6px;
+    padding: 10px 12px;
+    font-size: 0.8rem;
+    color: #92400e;
+    margin-top: 12px;
+    display: flex; align-items: flex-start; gap: 7px;
+  }
+
+  /* Misc */
+  .hidden { display: none !important; }
+  .divider { border: none; border-top: 1px solid var(--border); margin: 20px 0; }
+  .form-actions { display: flex; gap: 10px; margin-top: 20px; }
+  .empty-state {
+    text-align: center;
+    padding: 32px 20px;
+    color: var(--muted);
+  }
+  .empty-state i { font-size: 2rem; margin-bottom: 10px; display: block; }
+
+  .toast {
+    position: fixed;
+    bottom: 24px; right: 24px;
+    background: var(--text);
+    color: white;
+    padding: 10px 18px;
+    border-radius: 8px;
+    font-size: 0.88rem;
+    font-weight: 600;
+    z-index: 9999;
+    transform: translateY(80px);
+    opacity: 0;
+    transition: all 0.3s;
+  }
+  .toast.show { transform: translateY(0); opacity: 1; }
+  .toast.success { background: var(--success); }
+  .toast.error { background: var(--danger); }
+
+  .step-card.locked .step-body { opacity: 0.45; pointer-events: none; }
+  .step-card.locked .step-body::after { content: ''; position: absolute; inset: 0; }
+
+  .section-title { font-size: 1rem; font-weight: 700; color: var(--text); margin-bottom: 14px; }
+
+  @media print { .app-header, .form-actions, .export-section { display: none; } }
+</style>
+</head>
+<body>
+
+<div class="app-header">
+  <h1><i class="fa-solid fa-book-open"></i> Citation Builder</h1>
+  <p>Generate MLA, APA &amp; Chicago citations for your Works Cited, References, or Bibliography</p>
+</div>
+
+<div class="container">
+
+  <!-- Step 1: Format -->
+  <div class="step-card" id="step1-card">
+    <div class="step-header">
+      <div class="step-num">1</div>
+      <h2>Choose a Citation Format</h2>
+    </div>
+    <div class="step-body">
+      <div class="format-grid">
+        <button class="format-btn" data-fmt="mla" onclick="selectFormat('mla')">
+          <div class="fmt-name">MLA</div>
+          <div class="fmt-desc">9th Edition &mdash; Works Cited</div>
+        </button>
+        <button class="format-btn" data-fmt="apa" onclick="selectFormat('apa')">
+          <div class="fmt-name">APA</div>
+          <div class="fmt-desc">7th Edition &mdash; References</div>
+        </button>
+        <button class="format-btn" data-fmt="chicago" onclick="selectFormat('chicago')">
+          <div class="fmt-name">Chicago</div>
+          <div class="fmt-desc">17th Ed. &mdash; Notes-Bibliography</div>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Step 2: Source Type -->
+  <div class="step-card" id="step2-card">
+    <div class="step-header">
+      <div class="step-num">2</div>
+      <h2>Choose Source Type</h2>
+    </div>
+    <div class="step-body">
+      <div class="source-grid" id="source-grid">
+        <button class="source-btn" data-src="book" onclick="selectSource('book')">
+          <span class="src-icon">📚</span><span class="src-label">Book</span>
+        </button>
+        <button class="source-btn" data-src="bookChapter" onclick="selectSource('bookChapter')">
+          <span class="src-icon">📖</span><span class="src-label">Book Chapter</span>
+        </button>
+        <button class="source-btn" data-src="journalArticle" onclick="selectSource('journalArticle')">
+          <span class="src-icon">🔬</span><span class="src-label">Journal Article</span>
+        </button>
+        <button class="source-btn" data-src="magazineArticle" onclick="selectSource('magazineArticle')">
+          <span class="src-icon">📰</span><span class="src-label">Magazine Article</span>
+        </button>
+        <button class="source-btn" data-src="newspaperArticle" onclick="selectSource('newspaperArticle')">
+          <span class="src-icon">🗞️</span><span class="src-label">Newspaper Article</span>
+        </button>
+        <button class="source-btn" data-src="website" onclick="selectSource('website')">
+          <span class="src-icon">🌐</span><span class="src-label">Website / Webpage</span>
+        </button>
+        <button class="source-btn" data-src="video" onclick="selectSource('video')">
+          <span class="src-icon">▶️</span><span class="src-label">Online Video</span>
+        </button>
+        <button class="source-btn" data-src="podcast" onclick="selectSource('podcast')">
+          <span class="src-icon">🎙️</span><span class="src-label">Podcast</span>
+        </button>
+        <button class="source-btn" data-src="interview" onclick="selectSource('interview')">
+          <span class="src-icon">🎤</span><span class="src-label">Interview</span>
+        </button>
+        <button class="source-btn" data-src="govDocument" onclick="selectSource('govDocument')">
+          <span class="src-icon">🏛️</span><span class="src-label">Government Document</span>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Step 3: Form -->
+  <div class="step-card" id="step3-card">
+    <div class="step-header">
+      <div class="step-num">3</div>
+      <h2>Enter Source Information</h2>
+    </div>
+    <div class="step-body">
+      <form id="citation-form" onsubmit="return false;">
+        <div class="form-grid" id="form-fields"></div>
+        <div class="form-actions">
+          <button class="btn btn-primary" onclick="generateCitation()">
+            <i class="fa-solid fa-magic-wand-sparkles"></i> Generate Citation
+          </button>
+          <button class="btn btn-secondary" onclick="clearForm()">
+            <i class="fa-solid fa-rotate-left"></i> Clear Form
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Step 4: Preview -->
+  <div class="step-card" id="step4-card">
+    <div class="step-header">
+      <div class="step-num">4</div>
+      <h2>Citation Preview</h2>
+    </div>
+    <div class="step-body" id="preview-body">
+      <div class="empty-state">
+        <i class="fa-regular fa-eye-slash"></i>
+        Fill in the form above and click "Generate Citation" to see your citation here.
+      </div>
+    </div>
+  </div>
+
+  <!-- Citations List -->
+  <div class="step-card" id="citations-card">
+    <div class="step-header">
+      <div class="step-num"><i class="fa-solid fa-list"></i></div>
+      <h2>My Citations</h2>
+    </div>
+    <div class="step-body">
+      <div class="citations-header">
+        <span class="citations-count" id="citations-count">0 citations added</span>
+        <button class="btn btn-secondary btn-sm" onclick="sortCitations()" id="sort-btn" style="display:none">
+          <i class="fa-solid fa-arrow-down-a-z"></i> Sort A–Z
+        </button>
+      </div>
+      <div id="citations-list">
+        <div class="empty-state" id="empty-state">
+          <i class="fa-regular fa-bookmark"></i>
+          No citations yet. Generate a citation above and click "Add to My Citations."
+        </div>
+      </div>
+      <div id="export-section" class="export-section hidden">
+        <h3><i class="fa-solid fa-file-export"></i> Export Citations</h3>
+        <div class="export-note">
+          Format: <strong id="export-format-label">Works Cited</strong> &mdash; Times New Roman 12pt, double-spaced, hanging indent.
+        </div>
+        <div class="export-actions">
+          <button class="btn btn-primary" onclick="exportWord()">
+            <i class="fa-solid fa-file-word"></i> Download as Word (.docx)
+          </button>
+          <button class="btn btn-secondary" onclick="copyAll()">
+            <i class="fa-regular fa-copy"></i> Copy All to Clipboard
+          </button>
+        </div>
+        <div class="tip-box">
+          <i class="fa-solid fa-lightbulb"></i>
+          <span><strong>Tip:</strong> The Word document can also be opened in Google Docs via Google Drive — upload the .docx file and open with Google Docs.</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// ─── State ────────────────────────────────────────────────────────────────────
+let selectedFormat = null;
+let selectedSource = null;
+let citations = [];
+let lastGenerated = null;
+
+// ─── Helper: month abbreviations ─────────────────────────────────────────────
+const MONTHS_FULL = ['January','February','March','April','May','June',
+  'July','August','September','October','November','December'];
+const MLA_ABBR = {
+  'January':'Jan.','February':'Feb.','March':'Mar.','April':'Apr.',
+  'May':'May','June':'June','July':'July','August':'Aug.',
+  'September':'Sept.','October':'Oct.','November':'Nov.','December':'Dec.'
+};
+
+function mlaMonth(month) {
+  return MLA_ABBR[month] || month;
+}
+
+function mlaDate(day, month, year) {
+  const parts = [];
+  if (day) parts.push(day);
+  if (month) parts.push(mlaMonth(month));
+  if (year) parts.push(year);
+  return parts.join(' ');
+}
+
+function apaInitials(firstName) {
+  if (!firstName) return '';
+  return firstName.trim().split(/\s+/).map(n => n.charAt(0).toUpperCase() + '.').join(' ');
+}
+
+function pageRange(start, end) {
+  if (start && end && start !== end) return start + '\u2013' + end;
+  if (start) return start;
+  return '';
+}
+
+// ─── Author formatters ────────────────────────────────────────────────────────
+function getAuthors(fieldId) {
+  const rows = document.querySelectorAll(`.author-row[data-field="${fieldId}"]`);
+  const authors = [];
+  rows.forEach(row => {
+    const first = row.querySelector('.author-first').value.trim();
+    const last = row.querySelector('.author-last').value.trim();
+    if (first || last) authors.push({ first, last });
+  });
+  return authors;
+}
+
+function formatAuthorsMLA(authors) {
+  if (!authors.length) return '';
+  if (authors.length === 1) {
+    const a = authors[0];
+    if (a.last && a.first) return a.last + ', ' + a.first;
+    return a.last || a.first;
+  }
+  if (authors.length === 2) {
+    const a = authors[0], b = authors[1];
+    const first = (a.last && a.first) ? a.last + ', ' + a.first : (a.last || a.first);
+    const second = (b.first && b.last) ? b.first + ' ' + b.last : (b.last || b.first);
+    return first + ', and ' + second;
+  }
+  const a = authors[0];
+  const first = (a.last && a.first) ? a.last + ', ' + a.first : (a.last || a.first);
+  return first + ', et al.';
+}
+
+function formatAuthorsMLAIntext(authors) {
+  if (!authors.length) return '';
+  if (authors.length === 1) return authors[0].last || authors[0].first;
+  if (authors.length === 2) return (authors[0].last || authors[0].first) + ' and ' + (authors[1].last || authors[1].first);
+  return (authors[0].last || authors[0].first) + ' et al.';
+}
+
+function formatAuthorsAPA(authors) {
+  if (!authors.length) return '';
+  const fmt = a => {
+    if (a.last && a.first) return a.last + ', ' + apaInitials(a.first);
+    return a.last || a.first;
+  };
+  if (authors.length === 1) return fmt(authors[0]);
+  if (authors.length === 2) return fmt(authors[0]) + ', & ' + fmt(authors[1]);
+  if (authors.length <= 20) {
+    return authors.slice(0, -1).map(fmt).join(', ') + ', & ' + fmt(authors[authors.length - 1]);
+  }
+  // 21+
+  return authors.slice(0, 19).map(fmt).join(', ') + ', \u2026 ' + fmt(authors[authors.length - 1]);
+}
+
+function formatAuthorsAPAIntext(authors) {
+  if (!authors.length) return '';
+  if (authors.length === 1) return authors[0].last || authors[0].first;
+  if (authors.length === 2) return (authors[0].last || authors[0].first) + ' & ' + (authors[1].last || authors[1].first);
+  return (authors[0].last || authors[0].first) + ' et al.';
+}
+
+function formatAuthorsChicagoBib(authors) {
+  if (!authors.length) return '';
+  if (authors.length === 1) {
+    const a = authors[0];
+    if (a.last && a.first) return a.last + ', ' + a.first;
+    return a.last || a.first;
+  }
+  const fmt = a => (a.first && a.last) ? a.first + ' ' + a.last : (a.last || a.first);
+  const first = (authors[0].last && authors[0].first) ? authors[0].last + ', ' + authors[0].first : (authors[0].last || authors[0].first);
+  const rest = authors.slice(1).map(fmt);
+  if (rest.length === 1) return first + ', and ' + rest[0];
+  return first + ', ' + rest.slice(0, -1).join(', ') + ', and ' + rest[rest.length - 1];
+}
+
+function formatAuthorsChicagoNote(authors) {
+  if (!authors.length) return '';
+  const fmt = a => (a.first && a.last) ? a.first + ' ' + a.last : (a.last || a.first);
+  if (authors.length === 1) return fmt(authors[0]);
+  if (authors.length === 2) return fmt(authors[0]) + ' and ' + fmt(authors[1]);
+  if (authors.length === 3) return fmt(authors[0]) + ', ' + fmt(authors[1]) + ', and ' + fmt(authors[2]);
+  return fmt(authors[0]) + ' et al.';
+}
+
+function formatEditorsChicago(editors, bib) {
+  if (!editors.length) return '';
+  const fmt = a => (a.first && a.last) ? a.first + ' ' + a.last : (a.last || a.first);
+  const names = editors.map(fmt).join(bib ? ', and ' : ' and ');
+  const label = editors.length === 1 ? (bib ? 'edited by' : 'ed.') : (bib ? 'edited by' : 'eds.');
+  return label + ' ' + names;
+}
+
+function formatEditorsMLA(editors) {
+  if (!editors.length) return '';
+  const fmtFirst = a => (a.first && a.last) ? a.first + ' ' + a.last : (a.last || a.first);
+  if (editors.length === 1) return 'edited by ' + fmtFirst(editors[0]);
+  return 'edited by ' + editors.slice(0, -1).map(fmtFirst).join(', ') + ', and ' + fmtFirst(editors[editors.length - 1]);
+}
+
+function formatEditorsAPA(editors) {
+  if (!editors.length) return '';
+  const fmt = a => apaInitials(a.first) + ' ' + a.last;
+  const label = editors.length === 1 ? 'Ed.' : 'Eds.';
+  if (editors.length === 1) return fmt(editors[0]) + ' (' + label + ')';
+  if (editors.length === 2) return fmt(editors[0]) + ' & ' + fmt(editors[1]) + ' (' + label + ')';
+  return editors.slice(0, -1).map(fmt).join(', ') + ', & ' + fmt(editors[editors.length - 1]) + ' (' + label + ')';
+}
+
+// ─── Render markup ────────────────────────────────────────────────────────────
+function renderHTML(text) {
+  return text.replace(/\[i\](.*?)\[\/i\]/g, '<em>$1</em>');
+}
+
+// Clean up citation string
+function clean(s) {
+  return s
+    .replace(/,\s*\./g, '.')
+    .replace(/\.\s*\./g, '.')
+    .replace(/\s{2,}/g, ' ')
+    .replace(/,\s*,/g, ',')
+    .trim();
+}
+
+function val(id) {
+  const el = document.getElementById('field-' + id);
+  return el ? el.value.trim() : '';
+}
+
+// ─── Field Schema ─────────────────────────────────────────────────────────────
+const FIELD_SCHEMAS = {
+  book: [
+    { id: 'authors', type: 'authors', label: 'Author(s)', required: false },
+    { id: 'title', type: 'text', label: 'Title', required: true },
+    { id: 'subtitle', type: 'text', label: 'Subtitle', hint: 'optional' },
+    { id: 'edition', type: 'text', label: 'Edition', hint: 'e.g., 2nd ed.' },
+    { id: 'volume', type: 'text', label: 'Volume', hint: 'if part of a multi-volume set' },
+    { id: 'publisher', type: 'text', label: 'Publisher', required: true },
+    { id: 'pubCity', type: 'text', label: 'City of Publication', hint: 'Chicago only', formats: ['chicago'] },
+    { id: 'pubYear', type: 'text', label: 'Year', required: true },
+    { id: 'pagesCited', type: 'text', label: 'Page(s) Cited', hint: 'for in-text citation, e.g., 45 or 45–67' },
+  ],
+  bookChapter: [
+    { id: 'authors', type: 'authors', label: 'Chapter Author(s)', required: false },
+    { id: 'chapterTitle', type: 'text', label: 'Chapter Title', required: true, fullWidth: true },
+    { id: 'bookTitle', type: 'text', label: 'Book Title', required: true, fullWidth: true },
+    { id: 'editors', type: 'authors', label: 'Book Editor(s)', required: false },
+    { id: 'edition', type: 'text', label: 'Edition', hint: 'e.g., 2nd ed.' },
+    { id: 'publisher', type: 'text', label: 'Publisher', required: true },
+    { id: 'pubCity', type: 'text', label: 'City of Publication', hint: 'Chicago only', formats: ['chicago'] },
+    { id: 'pubYear', type: 'text', label: 'Year', required: true },
+    { id: 'pageStart', type: 'text', label: 'First Page', hint: 'first page of chapter' },
+    { id: 'pageEnd', type: 'text', label: 'Last Page', hint: 'last page of chapter' },
+    { id: 'pagesCited', type: 'text', label: 'Page(s) Cited', hint: 'specific page(s) cited' },
+  ],
+  journalArticle: [
+    { id: 'authors', type: 'authors', label: 'Author(s)', required: false },
+    { id: 'articleTitle', type: 'text', label: 'Article Title', required: true, fullWidth: true },
+    { id: 'journalName', type: 'text', label: 'Journal Name', required: true, fullWidth: true },
+    { id: 'volume', type: 'text', label: 'Volume' },
+    { id: 'issue', type: 'text', label: 'Issue' },
+    { id: 'pubYear', type: 'text', label: 'Year', required: true },
+    { id: 'pubMonth', type: 'month', label: 'Month', hint: 'if given, optional' },
+    { id: 'pageStart', type: 'text', label: 'First Page' },
+    { id: 'pageEnd', type: 'text', label: 'Last Page' },
+    { id: 'doi', type: 'text', label: 'DOI', hint: 'e.g., 10.1000/xyz123', fullWidth: true },
+    { id: 'url', type: 'text', label: 'URL', hint: 'if no DOI', fullWidth: true },
+    { id: 'pagesCited', type: 'text', label: 'Page(s) Cited', hint: 'specific page(s) cited' },
+  ],
+  magazineArticle: [
+    { id: 'authors', type: 'authors', label: 'Author(s)', required: false },
+    { id: 'articleTitle', type: 'text', label: 'Article Title', required: true, fullWidth: true },
+    { id: 'magazineName', type: 'text', label: 'Magazine Name', required: true, fullWidth: true },
+    { id: 'volume', type: 'text', label: 'Volume', hint: 'optional' },
+    { id: 'issue', type: 'text', label: 'Issue', hint: 'optional' },
+    { id: 'pubDay', type: 'text', label: 'Day', placeholder: 'e.g., 15' },
+    { id: 'pubMonth', type: 'month', label: 'Month' },
+    { id: 'pubYear', type: 'text', label: 'Year', required: true },
+    { id: 'pageStart', type: 'text', label: 'First Page' },
+    { id: 'pageEnd', type: 'text', label: 'Last Page' },
+    { id: 'url', type: 'text', label: 'URL', fullWidth: true },
+    { id: 'pagesCited', type: 'text', label: 'Page(s) Cited' },
+  ],
+  newspaperArticle: [
+    { id: 'authors', type: 'authors', label: 'Author(s)', required: false },
+    { id: 'articleTitle', type: 'text', label: 'Article Title', required: true, fullWidth: true },
+    { id: 'newspaperName', type: 'text', label: 'Newspaper Name', required: true, fullWidth: true },
+    { id: 'edition', type: 'text', label: 'Edition', hint: 'e.g., Late ed.' },
+    { id: 'pubDay', type: 'text', label: 'Day', placeholder: 'e.g., 15' },
+    { id: 'pubMonth', type: 'month', label: 'Month' },
+    { id: 'pubYear', type: 'text', label: 'Year', required: true },
+    { id: 'pageStart', type: 'text', label: 'First Page' },
+    { id: 'pageEnd', type: 'text', label: 'Last Page' },
+    { id: 'url', type: 'text', label: 'URL', fullWidth: true },
+    { id: 'pagesCited', type: 'text', label: 'Page(s) Cited' },
+  ],
+  website: [
+    { id: 'authors', type: 'authors', label: 'Author(s)', hint: 'optional', required: false },
+    { id: 'pageTitle', type: 'text', label: 'Page Title', required: true, fullWidth: true },
+    { id: 'websiteName', type: 'text', label: 'Website Name', required: true, fullWidth: true },
+    { id: 'organization', type: 'text', label: 'Organization / Sponsor', hint: 'if different from website name' },
+    { id: 'pubDay', type: 'text', label: 'Publish Day', hint: 'optional', placeholder: 'e.g., 15' },
+    { id: 'pubMonth', type: 'month', label: 'Publish Month', hint: 'optional' },
+    { id: 'pubYear', type: 'text', label: 'Publish Year', hint: 'optional' },
+    { id: 'accessDay', type: 'text', label: 'Access Day', formats: ['mla'], placeholder: 'e.g., 10' },
+    { id: 'accessMonth', type: 'month', label: 'Access Month', formats: ['mla'] },
+    { id: 'accessYear', type: 'text', label: 'Access Year', formats: ['mla'] },
+    { id: 'url', type: 'text', label: 'URL', required: true, fullWidth: true },
+  ],
+  video: [
+    { id: 'uploader', type: 'text', label: 'Channel / Uploader', hint: 'channel name, creator, or username', required: true, fullWidth: true },
+    { id: 'videoTitle', type: 'text', label: 'Video Title', required: true, fullWidth: true },
+    { id: 'platform', type: 'text', label: 'Platform', placeholder: 'YouTube' },
+    { id: 'pubDay', type: 'text', label: 'Upload Day', placeholder: 'e.g., 15' },
+    { id: 'pubMonth', type: 'month', label: 'Upload Month' },
+    { id: 'pubYear', type: 'text', label: 'Upload Year', required: true },
+    { id: 'url', type: 'text', label: 'URL', required: true, fullWidth: true },
+    { id: 'timestamp', type: 'text', label: 'Timestamp', hint: 'e.g., 3:22 — for in-text citation' },
+  ],
+  podcast: [
+    { id: 'hosts', type: 'authors', label: 'Host(s)', hint: 'optional', required: false },
+    { id: 'episodeTitle', type: 'text', label: 'Episode Title', required: true, fullWidth: true },
+    { id: 'podcastName', type: 'text', label: 'Podcast Name', required: true, fullWidth: true },
+    { id: 'season', type: 'text', label: 'Season', hint: 'optional' },
+    { id: 'episodeNum', type: 'text', label: 'Episode Number', hint: 'optional' },
+    { id: 'pubDay', type: 'text', label: 'Publish Day', placeholder: 'e.g., 15' },
+    { id: 'pubMonth', type: 'month', label: 'Publish Month' },
+    { id: 'pubYear', type: 'text', label: 'Publish Year', required: true },
+    { id: 'url', type: 'text', label: 'URL', fullWidth: true },
+  ],
+  interview: [
+    { id: 'intervieweeFirst', type: 'text', label: 'Interviewee First Name', required: true },
+    { id: 'intervieweeLast', type: 'text', label: 'Interviewee Last Name', required: true },
+    { id: 'interviewTitle', type: 'text', label: 'Interview Title', hint: 'if published/broadcast', fullWidth: true },
+    { id: 'interviewType', type: 'select', label: 'Interview Type', required: true,
+      options: [
+        { value: '', label: '— Select —' },
+        { value: 'Personal Interview', label: 'Personal Interview' },
+        { value: 'Email Interview', label: 'Email Interview' },
+        { value: 'Phone Interview', label: 'Phone Interview' },
+        { value: 'Published/Broadcast Interview', label: 'Published/Broadcast Interview' },
+      ]
+    },
+    { id: 'publication', type: 'text', label: 'Publication / Program', hint: 'if published/broadcast' },
+    { id: 'interviewerFirst', type: 'text', label: 'Interviewer First Name', hint: 'if published' },
+    { id: 'interviewerLast', type: 'text', label: 'Interviewer Last Name', hint: 'if published' },
+    { id: 'pubDay', type: 'text', label: 'Day', placeholder: 'e.g., 15' },
+    { id: 'pubMonth', type: 'month', label: 'Month' },
+    { id: 'pubYear', type: 'text', label: 'Year', required: true },
+    { id: 'url', type: 'text', label: 'URL', hint: 'optional', fullWidth: true },
+  ],
+  govDocument: [
+    { id: 'agency', type: 'text', label: 'Agency / Department', required: true, fullWidth: true },
+    { id: 'authors', type: 'authors', label: 'Author(s)', hint: 'optional, if individually credited', required: false },
+    { id: 'title', type: 'text', label: 'Report / Document Title', required: true, fullWidth: true },
+    { id: 'subtitle', type: 'text', label: 'Subtitle', hint: 'optional' },
+    { id: 'reportNum', type: 'text', label: 'Report Number', hint: 'if given' },
+    { id: 'pubYear', type: 'text', label: 'Year', required: true },
+    { id: 'publisher', type: 'text', label: 'Publisher', hint: 'if different from agency' },
+    { id: 'pubCity', type: 'text', label: 'City of Publication', hint: 'Chicago only', formats: ['chicago'] },
+    { id: 'url', type: 'text', label: 'URL', fullWidth: true },
+    { id: 'pagesCited', type: 'text', label: 'Page(s) Cited' },
+  ],
+};
+
+const SOURCE_LABELS = {
+  book: 'Book', bookChapter: 'Book Chapter', journalArticle: 'Journal Article',
+  magazineArticle: 'Magazine Article', newspaperArticle: 'Newspaper Article',
+  website: 'Website', video: 'Online Video', podcast: 'Podcast',
+  interview: 'Interview', govDocument: 'Gov. Document'
+};
+
+// ─── UI: Select format ────────────────────────────────────────────────────────
+function selectFormat(fmt) {
+  selectedFormat = fmt;
+  document.querySelectorAll('.format-btn').forEach(b => b.classList.toggle('active', b.dataset.fmt === fmt));
+  if (selectedSource) renderForm();
+  updateExportLabel();
+}
+
+function updateExportLabel() {
+  const lbl = document.getElementById('export-format-label');
+  if (!lbl) return;
+  const map = { mla: 'Works Cited', apa: 'References', chicago: 'Bibliography' };
+  lbl.textContent = selectedFormat ? (map[selectedFormat] || 'Works Cited') : 'Works Cited';
+}
+
+// ─── UI: Select source ────────────────────────────────────────────────────────
+function selectSource(src) {
+  selectedSource = src;
+  document.querySelectorAll('.source-btn').forEach(b => b.classList.toggle('active', b.dataset.src === src));
+  renderForm();
+  // Scroll to step 3
+  document.getElementById('step3-card').scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+// ─── Build form ───────────────────────────────────────────────────────────────
+function renderForm() {
+  if (!selectedSource || !selectedFormat) return;
+  const schema = FIELD_SCHEMAS[selectedSource];
+  const container = document.getElementById('form-fields');
+  container.innerHTML = '';
+
+  schema.forEach(field => {
+    // Check if field is for this format
+    if (field.formats && !field.formats.includes(selectedFormat)) return;
+
+    if (field.type === 'authors') {
+      const block = document.createElement('div');
+      block.className = 'authors-block';
+      block.innerHTML = `
+        <div class="authors-label-row">
+          <span class="field-label">${field.label}${field.hint ? ' <span class="field-hint">— ' + field.hint + '</span>' : ''}</span>
+        </div>
+        <div class="author-rows" id="rows-${field.id}"></div>
+        <button type="button" class="btn-add-author" onclick="addAuthorRow('${field.id}')">
+          <i class="fa-solid fa-plus"></i> Add ${field.id === 'editors' ? 'Editor' : (field.id === 'hosts' ? 'Host' : 'Author')}
+        </button>`;
+      container.appendChild(block);
+      addAuthorRow(field.id, block.querySelector('.author-rows'));
+      return;
+    }
+
+    const wrapper = document.createElement('div');
+    wrapper.className = 'field-group' + (field.fullWidth ? ' full-width' : '');
+    wrapper.dataset.fieldId = field.id;
+
+    let inputHTML = '';
+    if (field.type === 'select') {
+      const opts = field.options.map(o => `<option value="${o.value}">${o.label}</option>`).join('');
+      inputHTML = `<select id="field-${field.id}">${opts}</select>`;
+    } else if (field.type === 'month') {
+      const opts = ['', ...MONTHS_FULL].map(m => `<option value="${m}">${m || '— Month —'}</option>`).join('');
+      inputHTML = `<select id="field-${field.id}">${opts}</select>`;
+    } else {
+      inputHTML = `<input type="text" id="field-${field.id}"${field.placeholder ? ' placeholder="' + field.placeholder + '"' : ''}>`;
+    }
+
+    wrapper.innerHTML = `
+      <label class="field-label" for="field-${field.id}">
+        ${field.label}${field.required ? ' <span class="req">*</span>' : ''}
+        ${field.hint ? '<span class="field-hint">— ' + field.hint + '</span>' : ''}
+      </label>
+      ${inputHTML}
+      <span class="field-error hidden" id="err-${field.id}"></span>`;
+    container.appendChild(wrapper);
+  });
+}
+
+function addAuthorRow(fieldId, containerEl) {
+  const container = containerEl || document.getElementById('rows-' + fieldId);
+  if (!container) return;
+  const row = document.createElement('div');
+  row.className = 'author-row';
+  row.dataset.field = fieldId;
+  row.innerHTML = `
+    <input type="text" placeholder="First Name" class="author-first">
+    <input type="text" placeholder="Last Name" class="author-last">
+    <button type="button" class="btn-icon remove" onclick="removeAuthorRow(this)" title="Remove">
+      <i class="fa-solid fa-times"></i>
+    </button>`;
+  container.appendChild(row);
+}
+
+function removeAuthorRow(btn) {
+  const row = btn.closest('.author-row');
+  const container = row.parentElement;
+  if (container.children.length > 1) row.remove();
+  else {
+    row.querySelector('.author-first').value = '';
+    row.querySelector('.author-last').value = '';
+  }
+}
+
+function clearForm() {
+  renderForm();
+  document.getElementById('preview-body').innerHTML = `
+    <div class="empty-state">
+      <i class="fa-regular fa-eye-slash"></i>
+      Fill in the form above and click "Generate Citation" to see your citation here.
+    </div>`;
+  lastGenerated = null;
+}
+
+// ─── Validate ─────────────────────────────────────────────────────────────────
+function validateForm() {
+  const schema = FIELD_SCHEMAS[selectedSource];
+  let valid = true;
+  schema.forEach(field => {
+    if (!field.required) return;
+    if (field.formats && !field.formats.includes(selectedFormat)) return;
+    const errEl = document.getElementById('err-' + field.id);
+    const inputEl = document.getElementById('field-' + field.id);
+    if (!inputEl) return;
+    const v = inputEl.value.trim();
+    if (!v) {
+      if (errEl) { errEl.textContent = 'This field is required.'; errEl.classList.remove('hidden'); }
+      if (inputEl) inputEl.classList.add('error');
+      valid = false;
+    } else {
+      if (errEl) errEl.classList.add('hidden');
+      if (inputEl) inputEl.classList.remove('error');
+    }
+  });
+  return valid;
+}
+
+// ─── Citation generators ──────────────────────────────────────────────────────
+
+function buildCitation() {
+  const src = selectedSource;
+  const fmt = selectedFormat;
+  if (fmt === 'mla') return buildMLA(src);
+  if (fmt === 'apa') return buildAPA(src);
+  if (fmt === 'chicago') return buildChicago(src);
+}
+
+// ═══ MLA ══════════════════════════════════════════════════════════════════════
+
+function buildMLA(src) {
+  switch (src) {
+    case 'book': return mlBook();
+    case 'bookChapter': return mlBookChapter();
+    case 'journalArticle': return mlJournal();
+    case 'magazineArticle': return mlMagazine();
+    case 'newspaperArticle': return mlNewspaper();
+    case 'website': return mlWebsite();
+    case 'video': return mlVideo();
+    case 'podcast': return mlPodcast();
+    case 'interview': return mlInterview();
+    case 'govDocument': return mlGovDoc();
+    default: return null;
+  }
+}
+
+function mlAuthor() { return formatAuthorsMLA(getAuthors('authors')); }
+function mlAuthorIntext() { return formatAuthorsMLAIntext(getAuthors('authors')); }
+
+function mlBook() {
+  const authors = getAuthors('authors');
+  const title = val('title');
+  const sub = val('subtitle');
+  const fullTitle = sub ? title + ': ' + sub : title;
+  const ed = val('edition');
+  const vol = val('volume');
+  const pub = val('publisher');
+  const year = val('pubYear');
+  const pages = val('pagesCited');
+
+  let bib = '';
+  const authorStr = formatAuthorsMLA(authors);
+  if (authorStr) bib += authorStr + '. ';
+  bib += '[i]' + fullTitle + '[/i]. ';
+  if (ed) bib += ed + ', ';
+  if (vol) bib += 'vol. ' + vol + ', ';
+  bib += pub + ', ' + year + '.';
+
+  const intextAuth = formatAuthorsMLAIntext(authors) || shortTitle(fullTitle, 'i');
+  const intext = '(' + intextAuth + (pages ? ' ' + pages : '') + ')';
+  return { bib: clean(bib), intext };
+}
+
+function mlBookChapter() {
+  const authors = getAuthors('authors');
+  const chap = val('chapterTitle');
+  const book = val('bookTitle');
+  const editors = getAuthors('editors');
+  const ed = val('edition');
+  const pub = val('publisher');
+  const year = val('pubYear');
+  const ps = val('pageStart'), pe = val('pageEnd');
+  const pages = pageRange(ps, pe);
+  const pagesCited = val('pagesCited');
+
+  let bib = '';
+  const authorStr = formatAuthorsMLA(authors);
+  if (authorStr) bib += authorStr + '. ';
+  bib += '"' + chap + '." [i]' + book + '[/i], ';
+  if (editors.length) bib += formatEditorsMLA(editors) + ', ';
+  if (ed) bib += ed + ', ';
+  bib += pub + ', ' + year;
+  if (pages) bib += ', pp. ' + pages;
+  bib += '.';
+
+  const intextAuth = formatAuthorsMLAIntext(authors) || shortTitle(chap, '"');
+  const intext = '(' + intextAuth + (pagesCited ? ' ' + pagesCited : '') + ')';
+  return { bib: clean(bib), intext };
+}
+
+function mlJournal() {
+  const authors = getAuthors('authors');
+  const artTitle = val('articleTitle');
+  const journal = val('journalName');
+  const vol = val('volume');
+  const issue = val('issue');
+  const year = val('pubYear');
+  const month = val('pubMonth');
+  const ps = val('pageStart'), pe = val('pageEnd');
+  const pages = pageRange(ps, pe);
+  const doi = val('doi');
+  const url = val('url');
+  const pagesCited = val('pagesCited');
+
+  let bib = '';
+  const authorStr = formatAuthorsMLA(authors);
+  if (authorStr) bib += authorStr + '. ';
+  bib += '"' + artTitle + '." [i]' + journal + '[/i]';
+  if (vol) bib += ', vol. ' + vol;
+  if (issue) bib += ', no. ' + issue;
+  if (month || year) bib += ', ' + (month ? mlaMonth(month) + ' ' : '') + year;
+  if (pages) bib += ', pp. ' + pages;
+  bib += '.';
+  if (doi) bib += ' https://doi.org/' + doi + '.';
+  else if (url) bib += ' ' + url + '.';
+
+  const intextAuth = formatAuthorsMLAIntext(authors) || shortTitle(artTitle, '"');
+  const intext = '(' + intextAuth + (pagesCited ? ' ' + pagesCited : '') + ')';
+  return { bib: clean(bib), intext };
+}
+
+function mlMagazine() {
+  const authors = getAuthors('authors');
+  const artTitle = val('articleTitle');
+  const mag = val('magazineName');
+  const day = val('pubDay'), month = val('pubMonth'), year = val('pubYear');
+  const ps = val('pageStart'), pe = val('pageEnd');
+  const pages = pageRange(ps, pe);
+  const url = val('url');
+  const pagesCited = val('pagesCited');
+
+  let bib = '';
+  const authorStr = formatAuthorsMLA(authors);
+  if (authorStr) bib += authorStr + '. ';
+  bib += '"' + artTitle + '." [i]' + mag + '[/i], ' + mlaDate(day, month, year);
+  if (pages) bib += ', pp. ' + pages;
+  bib += '.';
+  if (url) bib += ' ' + url + '.';
+
+  const intextAuth = formatAuthorsMLAIntext(authors) || shortTitle(artTitle, '"');
+  const intext = '(' + intextAuth + (pagesCited ? ' ' + pagesCited : '') + ')';
+  return { bib: clean(bib), intext };
+}
+
+function mlNewspaper() {
+  const authors = getAuthors('authors');
+  const artTitle = val('articleTitle');
+  const paper = val('newspaperName');
+  const day = val('pubDay'), month = val('pubMonth'), year = val('pubYear');
+  const ps = val('pageStart'), pe = val('pageEnd');
+  const pages = pageRange(ps, pe);
+  const url = val('url');
+  const pagesCited = val('pagesCited');
+
+  let bib = '';
+  const authorStr = formatAuthorsMLA(authors);
+  if (authorStr) bib += authorStr + '. ';
+  bib += '"' + artTitle + '." [i]' + paper + '[/i], ' + mlaDate(day, month, year);
+  if (pages) bib += ', pp. ' + pages;
+  bib += '.';
+  if (url) bib += ' ' + url + '.';
+
+  const intextAuth = formatAuthorsMLAIntext(authors) || shortTitle(artTitle, '"');
+  const intext = '(' + intextAuth + (pagesCited ? ' ' + pagesCited : '') + ')';
+  return { bib: clean(bib), intext };
+}
+
+function mlWebsite() {
+  const authors = getAuthors('authors');
+  const pageTitle = val('pageTitle');
+  const siteName = val('websiteName');
+  const day = val('pubDay'), month = val('pubMonth'), year = val('pubYear');
+  const accessDay = val('accessDay'), accessMonth = val('accessMonth'), accessYear = val('accessYear');
+  const url = val('url');
+
+  let bib = '';
+  const authorStr = formatAuthorsMLA(authors);
+  if (authorStr) bib += authorStr + '. ';
+  bib += '"' + pageTitle + '." [i]' + siteName + '[/i]';
+  const dateStr = mlaDate(day, month, year);
+  if (dateStr) bib += ', ' + dateStr;
+  bib += ', ' + url + '.';
+  const accStr = mlaDate(accessDay, accessMonth, accessYear);
+  if (accStr) bib += ' Accessed ' + accStr + '.';
+
+  const intextAuth = formatAuthorsMLAIntext(authors) || shortTitle(pageTitle, '"');
+  const intext = '(' + intextAuth + ')';
+  return { bib: clean(bib), intext };
+}
+
+function mlVideo() {
+  const uploader = val('uploader');
+  const title = val('videoTitle');
+  const platform = val('platform') || 'YouTube';
+  const day = val('pubDay'), month = val('pubMonth'), year = val('pubYear');
+  const url = val('url');
+  const ts = val('timestamp');
+
+  let bib = uploader + '. "' + title + '." [i]' + platform + '[/i], ' + mlaDate(day, month, year) + ', ' + url + '.';
+  const intext = '(' + uploader + (ts ? ', ' + ts : '') + ')';
+  return { bib: clean(bib), intext };
+}
+
+function mlPodcast() {
+  const hosts = getAuthors('hosts');
+  const epTitle = val('episodeTitle');
+  const podName = val('podcastName');
+  const season = val('season');
+  const epNum = val('episodeNum');
+  const day = val('pubDay'), month = val('pubMonth'), year = val('pubYear');
+  const url = val('url');
+
+  let bib = '';
+  const hostStr = formatAuthorsMLA(hosts);
+  if (hostStr) bib += hostStr + '. ';
+  bib += '"' + epTitle + '." [i]' + podName + '[/i]';
+  if (season) bib += ', season ' + season;
+  if (epNum) bib += ', episode ' + epNum;
+  bib += ', ' + mlaDate(day, month, year) + '.';
+  if (url) bib += ' ' + url + '.';
+
+  const intextAuth = formatAuthorsMLAIntext(hosts) || podName;
+  const intext = '(' + intextAuth + ')';
+  return { bib: clean(bib), intext };
+}
+
+function mlInterview() {
+  const first = val('intervieweeFirst');
+  const last = val('intervieweeLast');
+  const type = val('interviewType') || 'Personal interview';
+  const day = val('pubDay'), month = val('pubMonth'), year = val('pubYear');
+  const interviewTitle = val('interviewTitle');
+  const publication = val('publication');
+  const url = val('url');
+
+  let bib = last + ', ' + first + '. ';
+  if (interviewTitle) bib += '"' + interviewTitle + '." ';
+  if (publication) bib += '[i]' + publication + '[/i]. ';
+  bib += type + '. ' + mlaDate(day, month, year) + '.';
+  if (url) bib += ' ' + url + '.';
+
+  const intext = '(' + last + ')';
+  return { bib: clean(bib), intext };
+}
+
+function mlGovDoc() {
+  const agency = val('agency');
+  const title = val('title');
+  const sub = val('subtitle');
+  const fullTitle = sub ? title + ': ' + sub : title;
+  const year = val('pubYear');
+  const pub = val('publisher');
+  const url = val('url');
+  const pagesCited = val('pagesCited');
+
+  let bib = agency + '. [i]' + fullTitle + '[/i]. ';
+  if (pub && pub !== agency) bib += pub + ', ';
+  bib += year + '.';
+  if (url) bib += ' ' + url + '.';
+
+  // Abbreviate for in-text if long
+  const agencyShort = agency.length > 30 ? agency.split(/[\s,]/)[0] : agency;
+  const intext = '(' + agencyShort + ' ' + year + (pagesCited ? ', ' + pagesCited : '') + ')';
+  return { bib: clean(bib), intext };
+}
+
+// ═══ APA ══════════════════════════════════════════════════════════════════════
+
+function buildAPA(src) {
+  switch (src) {
+    case 'book': return apaBook();
+    case 'bookChapter': return apaBookChapter();
+    case 'journalArticle': return apaJournal();
+    case 'magazineArticle': return apaMagazine();
+    case 'newspaperArticle': return apaNewspaper();
+    case 'website': return apaWebsite();
+    case 'video': return apaVideo();
+    case 'podcast': return apaPodcast();
+    case 'interview': return apaInterview();
+    case 'govDocument': return apaGovDoc();
+    default: return null;
+  }
+}
+
+function apaDateFull(year, month, day) {
+  if (!year) return '(n.d.)';
+  let d = year;
+  if (month) d += ', ' + month;
+  if (day) d += ' ' + day;
+  return '(' + d + ')';
+}
+
+function apaYear(year) { return year ? '(' + year + ')' : '(n.d.)'; }
+
+function apaBook() {
+  const authors = getAuthors('authors');
+  const title = val('title');
+  const sub = val('subtitle');
+  const fullTitle = sub ? title + ': ' + sub : title;
+  const ed = val('edition');
+  const vol = val('volume');
+  const pub = val('publisher');
+  const year = val('pubYear');
+  const pages = val('pagesCited');
+
+  const authorStr = formatAuthorsAPA(authors);
+  let bib = '';
+  if (authorStr) bib += authorStr + '. ';
+  bib += apaYear(year) + '. [i]' + fullTitle + '[/i]';
+  if (ed) bib += ' (' + ed + ')';
+  if (vol) bib += ' (Vol. ' + vol + ')';
+  bib += '. ' + pub + '.';
+
+  const intextAuth = formatAuthorsAPAIntext(authors);
+  const yr = year || 'n.d.';
+  if (intextAuth) {
+    const intext = pages ? '(' + intextAuth + ', ' + yr + ', p. ' + pages + ')' : '(' + intextAuth + ', ' + yr + ')';
+    return { bib: clean(bib), intext };
+  } else {
+    const st = shortTitle(fullTitle, 'i');
+    const intext = '(' + st + ', ' + yr + (pages ? ', p. ' + pages : '') + ')';
+    return { bib: clean(bib), intext };
+  }
+}
+
+function apaBookChapter() {
+  const authors = getAuthors('authors');
+  const chap = val('chapterTitle');
+  const book = val('bookTitle');
+  const editors = getAuthors('editors');
+  const ed = val('edition');
+  const pub = val('publisher');
+  const year = val('pubYear');
+  const ps = val('pageStart'), pe = val('pageEnd');
+  const pages = pageRange(ps, pe);
+  const pagesCited = val('pagesCited');
+
+  const authorStr = formatAuthorsAPA(authors);
+  let bib = '';
+  if (authorStr) bib += authorStr + '. ';
+  bib += apaYear(year) + '. ' + sentenceCase(chap) + '. ';
+  if (editors.length) bib += 'In ' + formatEditorsAPA(editors) + ', ';
+  bib += '[i]' + book + '[/i]';
+  if (ed) bib += ' (' + ed + ')';
+  if (pages) bib += ' (pp. ' + pages + ')';
+  bib += '. ' + pub + '.';
+
+  const intextAuth = formatAuthorsAPAIntext(authors);
+  const yr = year || 'n.d.';
+  const intext = '(' + (intextAuth || shortTitle(chap, '"')) + ', ' + yr + (pagesCited ? ', p. ' + pagesCited : '') + ')';
+  return { bib: clean(bib), intext };
+}
+
+function apaJournal() {
+  const authors = getAuthors('authors');
+  const artTitle = val('articleTitle');
+  const journal = val('journalName');
+  const vol = val('volume');
+  const issue = val('issue');
+  const year = val('pubYear');
+  const ps = val('pageStart'), pe = val('pageEnd');
+  const pages = pageRange(ps, pe);
+  const doi = val('doi');
+  const url = val('url');
+  const pagesCited = val('pagesCited');
+
+  const authorStr = formatAuthorsAPA(authors);
+  let bib = '';
+  if (authorStr) bib += authorStr + '. ';
+  bib += apaYear(year) + '. ' + sentenceCase(artTitle) + '. [i]' + journal;
+  if (vol) bib += ', ' + vol;
+  bib += '[/i]';
+  if (issue) bib += '(' + issue + ')';
+  if (pages) bib += ', ' + pages;
+  bib += '.';
+  if (doi) bib += ' https://doi.org/' + doi;
+  else if (url) bib += ' ' + url;
+
+  const intextAuth = formatAuthorsAPAIntext(authors);
+  const yr = year || 'n.d.';
+  const intext = '(' + (intextAuth || shortTitle(artTitle, '"')) + ', ' + yr + (pagesCited ? ', p. ' + pagesCited : '') + ')';
+  return { bib: clean(bib), intext };
+}
+
+function apaMagazine() {
+  const authors = getAuthors('authors');
+  const artTitle = val('articleTitle');
+  const mag = val('magazineName');
+  const vol = val('volume'), issue = val('issue');
+  const day = val('pubDay'), month = val('pubMonth'), year = val('pubYear');
+  const ps = val('pageStart'), pe = val('pageEnd');
+  const pages = pageRange(ps, pe);
+  const url = val('url');
+  const pagesCited = val('pagesCited');
+
+  const authorStr = formatAuthorsAPA(authors);
+  let bib = '';
+  if (authorStr) bib += authorStr + '. ';
+  bib += apaDateFull(year, month, day) + '. ' + sentenceCase(artTitle) + '. [i]' + mag;
+  if (vol) bib += ', ' + vol;
+  bib += '[/i]';
+  if (issue) bib += '(' + issue + ')';
+  if (pages) bib += ', ' + pages;
+  bib += '.';
+  if (url) bib += ' ' + url;
+
+  const intextAuth = formatAuthorsAPAIntext(authors);
+  const yr = year || 'n.d.';
+  const intext = '(' + (intextAuth || shortTitle(artTitle, '"')) + ', ' + yr + (pagesCited ? ', p. ' + pagesCited : '') + ')';
+  return { bib: clean(bib), intext };
+}
+
+function apaNewspaper() {
+  const authors = getAuthors('authors');
+  const artTitle = val('articleTitle');
+  const paper = val('newspaperName');
+  const day = val('pubDay'), month = val('pubMonth'), year = val('pubYear');
+  const ps = val('pageStart'), pe = val('pageEnd');
+  const pages = pageRange(ps, pe);
+  const url = val('url');
+  const pagesCited = val('pagesCited');
+
+  const authorStr = formatAuthorsAPA(authors);
+  let bib = '';
+  if (authorStr) bib += authorStr + '. ';
+  bib += apaDateFull(year, month, day) + '. ' + sentenceCase(artTitle) + '. [i]' + paper + '[/i]';
+  if (pages) bib += ', ' + pages;
+  bib += '.';
+  if (url) bib += ' ' + url;
+
+  const intextAuth = formatAuthorsAPAIntext(authors);
+  const yr = year || 'n.d.';
+  const intext = '(' + (intextAuth || shortTitle(artTitle, '"')) + ', ' + yr + (pagesCited ? ', p. ' + pagesCited : '') + ')';
+  return { bib: clean(bib), intext };
+}
+
+function apaWebsite() {
+  const authors = getAuthors('authors');
+  const pageTitle = val('pageTitle');
+  const siteName = val('websiteName');
+  const day = val('pubDay'), month = val('pubMonth'), year = val('pubYear');
+  const url = val('url');
+
+  const authorStr = formatAuthorsAPA(authors);
+  let bib = '';
+  if (authorStr) bib += authorStr + '. ';
+  bib += apaDateFull(year, month, day) + '. ' + sentenceCase(pageTitle) + '. [i]' + siteName + '[/i]. ' + url;
+
+  const intextAuth = formatAuthorsAPAIntext(authors);
+  const yr = year || 'n.d.';
+  const intext = '(' + (intextAuth || shortTitle(pageTitle, '"')) + ', ' + yr + ')';
+  return { bib: clean(bib), intext };
+}
+
+function apaVideo() {
+  const uploader = val('uploader');
+  const title = val('videoTitle');
+  const platform = val('platform') || 'YouTube';
+  const day = val('pubDay'), month = val('pubMonth'), year = val('pubYear');
+  const url = val('url');
+
+  let bib = uploader + ' [' + uploader + ']. ' + apaDateFull(year, month, day) + '. [i]' + sentenceCase(title) + '[/i] [Video]. ' + platform + '. ' + url;
+  const yr = year || 'n.d.';
+  const intext = '(' + uploader + ', ' + yr + ')';
+  return { bib: clean(bib), intext };
+}
+
+function apaPodcast() {
+  const hosts = getAuthors('hosts');
+  const epTitle = val('episodeTitle');
+  const podName = val('podcastName');
+  const epNum = val('episodeNum');
+  const day = val('pubDay'), month = val('pubMonth'), year = val('pubYear');
+  const url = val('url');
+
+  const hostStr = formatAuthorsAPA(hosts);
+  let bib = '';
+  if (hostStr) bib += hostStr + ' (Host). ';
+  bib += apaDateFull(year, month, day) + '. ' + sentenceCase(epTitle);
+  if (epNum) bib += ' (No. ' + epNum + ')';
+  bib += ' [Audio podcast episode]. In [i]' + podName + '[/i].';
+  if (url) bib += ' ' + url;
+
+  const intextAuth = formatAuthorsAPAIntext(hosts);
+  const yr = year || 'n.d.';
+  const intext = '(' + (intextAuth || podName) + ', ' + yr + ')';
+  return { bib: clean(bib), intext };
+}
+
+function apaInterview() {
+  const first = val('intervieweeFirst');
+  const last = val('intervieweeLast');
+  const type = val('interviewType') || 'Personal Interview';
+  const year = val('pubYear');
+  const interviewTitle = val('interviewTitle');
+  const publication = val('publication');
+  const url = val('url');
+  const day = val('pubDay'), month = val('pubMonth');
+
+  if (type === 'Published/Broadcast Interview') {
+    const interviewerFirst = val('interviewerFirst');
+    const interviewerLast = val('interviewerLast');
+    let bib = last + ', ' + apaInitials(first) + '. ' + apaDateFull(year, month, day) + '. ';
+    if (interviewTitle) bib += '[Interview]. ';
+    if (interviewerFirst || interviewerLast) bib += 'Interview by ' + apaInitials(interviewerFirst) + ' ' + interviewerLast + '. ';
+    if (publication) bib += '[i]' + publication + '[/i]. ';
+    if (url) bib += url;
+    const yr = year || 'n.d.';
+    const intext = '(' + last + ', ' + yr + ')';
+    return { bib: clean(bib), intext, note: 'APA: Personal communications (non-published interviews) are cited in text only and do not appear in the reference list.' };
+  }
+
+  const yr = year || 'n.d.';
+  const intext = '(' + last + ', personal communication, ' + (month ? month + ' ' : '') + (day ? day + ', ' : '') + year + ')';
+  const bib = '';
+  return { bib: '', intext, note: 'APA: Personal communications (personal, email, and phone interviews) are cited in-text only and do not appear in the reference list. Use the in-text citation below.' };
+}
+
+function apaGovDoc() {
+  const agency = val('agency');
+  const title = val('title');
+  const sub = val('subtitle');
+  const fullTitle = sub ? title + ': ' + sub : title;
+  const year = val('pubYear');
+  const reportNum = val('reportNum');
+  const pub = val('publisher');
+  const url = val('url');
+  const pagesCited = val('pagesCited');
+
+  let bib = agency + '. ' + apaYear(year) + '. [i]' + sentenceCase(fullTitle) + '[/i]';
+  if (reportNum) bib += ' (Report No. ' + reportNum + ')';
+  bib += '.';
+  if (pub && pub !== agency) bib += ' ' + pub + '.';
+  if (url) bib += ' ' + url;
+
+  const agencyShort = agency.length > 30 ? agency.split(/[\s,]/)[0] : agency;
+  const yr = year || 'n.d.';
+  const intext = '(' + agencyShort + ', ' + yr + (pagesCited ? ', p. ' + pagesCited : '') + ')';
+  return { bib: clean(bib), intext };
+}
+
+// ═══ Chicago ══════════════════════════════════════════════════════════════════
+
+function buildChicago(src) {
+  switch (src) {
+    case 'book': return chicagoBook();
+    case 'bookChapter': return chicagoBookChapter();
+    case 'journalArticle': return chicagoJournal();
+    case 'magazineArticle': return chicagoMagazine();
+    case 'newspaperArticle': return chicagoNewspaper();
+    case 'website': return chicagoWebsite();
+    case 'video': return chicagoVideo();
+    case 'podcast': return chicagoPodcast();
+    case 'interview': return chicagoInterview();
+    case 'govDocument': return chicagoGovDoc();
+    default: return null;
+  }
+}
+
+function chiDate(day, month, year) {
+  const parts = [];
+  if (month) parts.push(month);
+  if (day) parts.push(day + ',');
+  if (year) parts.push(year);
+  return parts.join(' ');
+}
+
+function chicagoBook() {
+  const authors = getAuthors('authors');
+  const title = val('title');
+  const sub = val('subtitle');
+  const fullTitle = sub ? title + ': ' + sub : title;
+  const ed = val('edition');
+  const pub = val('publisher');
+  const city = val('pubCity');
+  const year = val('pubYear');
+  const pages = val('pagesCited');
+
+  const bibAuth = formatAuthorsChicagoBib(authors);
+  let bib = '';
+  if (bibAuth) bib += bibAuth + '. ';
+  bib += '[i]' + fullTitle + '[/i].';
+  if (ed) bib += ' ' + ed + '.';
+  bib += ' ' + (city ? city + ': ' : '') + pub + ', ' + year + '.';
+
+  const noteAuth = formatAuthorsChicagoNote(authors);
+  let fullNote = (noteAuth ? noteAuth + ', ' : '') + '[i]' + fullTitle + '[/i]';
+  if (ed) fullNote += ', ' + ed;
+  fullNote += ' (' + (city ? city + ': ' : '') + pub + ', ' + year + ')';
+  if (pages) fullNote += ', ' + pages;
+  fullNote += '.';
+
+  const bibAuthLast = authors.length ? (authors[0].last || authors[0].first) : shortTitle(fullTitle, 'i');
+  const shortNote = bibAuthLast + ', [i]' + shortenTitle(fullTitle) + '[/i]' + (pages ? ', ' + pages : '') + '.';
+
+  return { bib: clean(bib), fullNote: clean(fullNote), shortNote: clean(shortNote) };
+}
+
+function chicagoBookChapter() {
+  const authors = getAuthors('authors');
+  const chap = val('chapterTitle');
+  const book = val('bookTitle');
+  const editors = getAuthors('editors');
+  const ed = val('edition');
+  const pub = val('publisher');
+  const city = val('pubCity');
+  const year = val('pubYear');
+  const ps = val('pageStart'), pe = val('pageEnd');
+  const pages = pageRange(ps, pe);
+  const pagesCited = val('pagesCited');
+
+  const bibAuth = formatAuthorsChicagoBib(authors);
+  let bib = '';
+  if (bibAuth) bib += bibAuth + '. ';
+  bib += '"' + chap + '." In [i]' + book + '[/i]';
+  if (editors.length) bib += ', ' + formatEditorsChicago(editors, true);
+  if (pages) bib += ', ' + pages;
+  if (ed) bib += '. ' + ed;
+  bib += '. ' + (city ? city + ': ' : '') + pub + ', ' + year + '.';
+
+  const noteAuth = formatAuthorsChicagoNote(authors);
+  let fullNote = (noteAuth ? noteAuth + ', ' : '') + '"' + chap + '," in [i]' + book + '[/i]';
+  if (editors.length) bib += ', ' + formatEditorsChicago(editors, false);
+  fullNote += ' (' + (city ? city + ': ' : '') + pub + ', ' + year + ')';
+  if (pagesCited) fullNote += ', ' + pagesCited;
+  fullNote += '.';
+
+  const bibAuthLast = authors.length ? (authors[0].last || authors[0].first) : shortTitle(chap, '"');
+  const shortNote = bibAuthLast + ', "' + shortenTitle(chap) + '"' + (pagesCited ? ', ' + pagesCited : '') + '.';
+
+  return { bib: clean(bib), fullNote: clean(fullNote), shortNote: clean(shortNote) };
+}
+
+function chicagoJournal() {
+  const authors = getAuthors('authors');
+  const artTitle = val('articleTitle');
+  const journal = val('journalName');
+  const vol = val('volume'), issue = val('issue');
+  const year = val('pubYear');
+  const ps = val('pageStart'), pe = val('pageEnd');
+  const pages = pageRange(ps, pe);
+  const doi = val('doi');
+  const pagesCited = val('pagesCited');
+
+  const bibAuth = formatAuthorsChicagoBib(authors);
+  let bib = '';
+  if (bibAuth) bib += bibAuth + '. ';
+  bib += '"' + artTitle + '." [i]' + journal + '[/i] ' + (vol || '') + (issue ? ', no. ' + issue : '') + ' (' + year + ')';
+  if (pages) bib += ': ' + pages;
+  bib += '.';
+  if (doi) bib += ' https://doi.org/' + doi + '.';
+
+  const noteAuth = formatAuthorsChicagoNote(authors);
+  let fullNote = (noteAuth ? noteAuth + ', ' : '') + '"' + artTitle + '," [i]' + journal + '[/i] ' + (vol || '') + (issue ? ', no. ' + issue : '') + ' (' + year + ')';
+  if (pagesCited) fullNote += ': ' + pagesCited;
+  fullNote += '.';
+  if (doi) fullNote += ' https://doi.org/' + doi + '.';
+
+  const bibAuthLast = authors.length ? (authors[0].last || authors[0].first) : shortTitle(artTitle, '"');
+  const shortNote = bibAuthLast + ', "' + shortenTitle(artTitle) + '"' + (pagesCited ? ', ' + pagesCited : '') + '.';
+
+  return { bib: clean(bib), fullNote: clean(fullNote), shortNote: clean(shortNote) };
+}
+
+function chicagoMagazine() {
+  const authors = getAuthors('authors');
+  const artTitle = val('articleTitle');
+  const mag = val('magazineName');
+  const day = val('pubDay'), month = val('pubMonth'), year = val('pubYear');
+  const url = val('url');
+  const pagesCited = val('pagesCited');
+
+  const bibAuth = formatAuthorsChicagoBib(authors);
+  let bib = '';
+  if (bibAuth) bib += bibAuth + '. ';
+  bib += '"' + artTitle + '." [i]' + mag + '[/i], ' + chiDate(day, month, year) + '.';
+  if (url) bib += ' ' + url + '.';
+
+  const noteAuth = formatAuthorsChicagoNote(authors);
+  let fullNote = (noteAuth ? noteAuth + ', ' : '') + '"' + artTitle + '," [i]' + mag + '[/i], ' + chiDate(day, month, year);
+  if (pagesCited) fullNote += ', ' + pagesCited;
+  fullNote += '.';
+
+  const bibAuthLast = authors.length ? (authors[0].last || authors[0].first) : shortTitle(artTitle, '"');
+  const shortNote = bibAuthLast + ', "' + shortenTitle(artTitle) + '"' + (pagesCited ? ', ' + pagesCited : '') + '.';
+
+  return { bib: clean(bib), fullNote: clean(fullNote), shortNote: clean(shortNote) };
+}
+
+function chicagoNewspaper() {
+  const authors = getAuthors('authors');
+  const artTitle = val('articleTitle');
+  const paper = val('newspaperName');
+  const day = val('pubDay'), month = val('pubMonth'), year = val('pubYear');
+  const url = val('url');
+  const pagesCited = val('pagesCited');
+
+  const bibAuth = formatAuthorsChicagoBib(authors);
+  let bib = '';
+  if (bibAuth) bib += bibAuth + '. ';
+  bib += '"' + artTitle + '." [i]' + paper + '[/i], ' + chiDate(day, month, year) + '.';
+  if (url) bib += ' ' + url + '.';
+
+  const noteAuth = formatAuthorsChicagoNote(authors);
+  let fullNote = (noteAuth ? noteAuth + ', ' : '') + '"' + artTitle + '," [i]' + paper + '[/i], ' + chiDate(day, month, year);
+  if (pagesCited) fullNote += ', ' + pagesCited;
+  fullNote += '.';
+
+  const bibAuthLast = authors.length ? (authors[0].last || authors[0].first) : shortTitle(artTitle, '"');
+  const shortNote = bibAuthLast + ', "' + shortenTitle(artTitle) + '"' + (pagesCited ? ', ' + pagesCited : '') + '.';
+
+  return { bib: clean(bib), fullNote: clean(fullNote), shortNote: clean(shortNote) };
+}
+
+function chicagoWebsite() {
+  const authors = getAuthors('authors');
+  const pageTitle = val('pageTitle');
+  const siteName = val('websiteName');
+  const day = val('pubDay'), month = val('pubMonth'), year = val('pubYear');
+  const url = val('url');
+
+  const bibAuth = formatAuthorsChicagoBib(authors);
+  let bib = '';
+  if (bibAuth) bib += bibAuth + '. ';
+  bib += '"' + pageTitle + '." [i]' + siteName + '[/i]. ' + chiDate(day, month, year) + '. ' + url + '.';
+
+  const noteAuth = formatAuthorsChicagoNote(authors);
+  let fullNote = (noteAuth ? noteAuth + ', ' : '') + '"' + pageTitle + '," [i]' + siteName + '[/i], ' + chiDate(day, month, year) + ', ' + url + '.';
+
+  const bibAuthLast = authors.length ? (authors[0].last || authors[0].first) : shortTitle(pageTitle, '"');
+  const shortNote = bibAuthLast + ', "' + shortenTitle(pageTitle) + '."';
+
+  return { bib: clean(bib), fullNote: clean(fullNote), shortNote: clean(shortNote) };
+}
+
+function chicagoVideo() {
+  const uploader = val('uploader');
+  const title = val('videoTitle');
+  const platform = val('platform') || 'YouTube';
+  const day = val('pubDay'), month = val('pubMonth'), year = val('pubYear');
+  const url = val('url');
+
+  let bib = uploader + '. "' + title + '." [i]' + platform + '[/i]. ' + chiDate(day, month, year) + '. ' + url + '.';
+  let fullNote = uploader + ', "' + title + '," [i]' + platform + '[/i], ' + chiDate(day, month, year) + ', ' + url + '.';
+  const shortNote = uploader + ', "' + shortenTitle(title) + '."';
+
+  return { bib: clean(bib), fullNote: clean(fullNote), shortNote: clean(shortNote) };
+}
+
+function chicagoPodcast() {
+  const hosts = getAuthors('hosts');
+  const epTitle = val('episodeTitle');
+  const podName = val('podcastName');
+  const epNum = val('episodeNum');
+  const day = val('pubDay'), month = val('pubMonth'), year = val('pubYear');
+  const url = val('url');
+
+  const bibAuth = formatAuthorsChicagoBib(hosts);
+  let bib = '';
+  if (bibAuth) bib += bibAuth + '. ';
+  bib += '"' + epTitle + '." [i]' + podName + '[/i]';
+  if (epNum) bib += ', no. ' + epNum;
+  bib += '. ' + chiDate(day, month, year) + '.';
+  if (url) bib += ' ' + url + '.';
+
+  const noteAuth = formatAuthorsChicagoNote(hosts);
+  let fullNote = (noteAuth ? noteAuth + ', ' : '') + '"' + epTitle + '," [i]' + podName + '[/i]';
+  if (epNum) fullNote += ', no. ' + epNum;
+  fullNote += ', ' + chiDate(day, month, year);
+  if (url) fullNote += ', ' + url;
+  fullNote += '.';
+
+  const bibAuthLast = hosts.length ? (hosts[0].last || hosts[0].first) : podName;
+  const shortNote = bibAuthLast + ', "' + shortenTitle(epTitle) + '."';
+
+  return { bib: clean(bib), fullNote: clean(fullNote), shortNote: clean(shortNote) };
+}
+
+function chicagoInterview() {
+  const first = val('intervieweeFirst');
+  const last = val('intervieweeLast');
+  const type = val('interviewType') || 'Personal Interview';
+  const day = val('pubDay'), month = val('pubMonth'), year = val('pubYear');
+  const interviewTitle = val('interviewTitle');
+  const publication = val('publication');
+  const interviewerFirst = val('interviewerFirst');
+  const interviewerLast = val('interviewerLast');
+  const url = val('url');
+
+  let bib = last + ', ' + first + '. ';
+  if (interviewTitle) bib += '"' + interviewTitle + '." ';
+  else bib += 'Interview';
+  if (interviewerFirst || interviewerLast) bib += ' by ' + interviewerFirst + ' ' + interviewerLast;
+  if (publication) bib += '. [i]' + publication + '[/i]';
+  bib += '. ' + chiDate(day, month, year) + '.';
+  if (url) bib += ' ' + url + '.';
+
+  let fullNote = first + ' ' + last + ', ';
+  if (interviewTitle) fullNote += '"' + interviewTitle + '," ';
+  else fullNote += 'interview';
+  if (interviewerFirst || interviewerLast) fullNote += ' by ' + interviewerFirst + ' ' + interviewerLast;
+  if (publication) fullNote += ', [i]' + publication + '[/i]';
+  fullNote += ', ' + chiDate(day, month, year) + '.';
+
+  const shortNote = last + ', interview, ' + chiDate(day, month, year) + '.';
+
+  return { bib: clean(bib), fullNote: clean(fullNote), shortNote: clean(shortNote) };
+}
+
+function chicagoGovDoc() {
+  const agency = val('agency');
+  const title = val('title');
+  const sub = val('subtitle');
+  const fullTitle = sub ? title + ': ' + sub : title;
+  const year = val('pubYear');
+  const pub = val('publisher');
+  const city = val('pubCity');
+  const url = val('url');
+  const pagesCited = val('pagesCited');
+
+  let bib = agency + '. [i]' + fullTitle + '[/i]. ';
+  bib += (city ? city + ': ' : '') + (pub && pub !== agency ? pub : agency) + ', ' + year + '.';
+  if (url) bib += ' ' + url + '.';
+
+  let fullNote = agency + ', [i]' + fullTitle + '[/i] (' + (city ? city + ': ' : '') + (pub && pub !== agency ? pub : agency) + ', ' + year + ')';
+  if (pagesCited) fullNote += ', ' + pagesCited;
+  fullNote += '.';
+
+  const agencyShort = agency.length > 30 ? agency.split(/[\s,]/)[0] : agency;
+  const shortNote = agencyShort + ', [i]' + shortenTitle(fullTitle) + '[/i]' + (pagesCited ? ', ' + pagesCited : '') + '.';
+
+  return { bib: clean(bib), fullNote: clean(fullNote), shortNote: clean(shortNote) };
+}
+
+// ─── Utility ──────────────────────────────────────────────────────────────────
+function sentenceCase(str) {
+  if (!str) return str;
+  return str.charAt(0).toUpperCase() + str.slice(1).toLowerCase()
+    .replace(/:\s+([a-z])/g, (m, c) => ': ' + c.toUpperCase());
+}
+
+function shortTitle(title, mode) {
+  // For in-text citations without author
+  const words = title.trim().split(/\s+/).slice(0, 4).join(' ');
+  if (mode === 'i') return '[i]' + words + '[/i]';
+  if (mode === '"') return '"' + words + '"';
+  return words;
+}
+
+function shortenTitle(title) {
+  const words = title.trim().split(/\s+/);
+  if (words.length <= 4) return title;
+  return words.slice(0, 4).join(' ');
+}
+
+// ─── Generate & display citation ──────────────────────────────────────────────
+function generateCitation() {
+  if (!selectedFormat || !selectedSource) {
+    showToast('Please select a format and source type first.', 'error');
+    return;
+  }
+  if (!validateForm()) {
+    showToast('Please fill in all required fields.', 'error');
+    return;
+  }
+
+  const result = buildCitation();
+  if (!result) return;
+
+  lastGenerated = { ...result, format: selectedFormat, source: selectedSource };
+
+  const previewBody = document.getElementById('preview-body');
+  let html = '';
+
+  if (result.note) {
+    html += `<div class="preview-box intext" style="margin-bottom:12px">
+      <div class="preview-label"><i class="fa-solid fa-circle-info"></i> Note</div>
+      <div class="preview-text">${result.note}</div>
+    </div>`;
+  }
+
+  if (result.bib) {
+    const formatLabel = { mla: 'Works Cited Entry', apa: 'Reference List Entry', chicago: 'Bibliography Entry' }[selectedFormat];
+    html += `<div class="preview-box bib">
+      <div class="preview-label"><i class="fa-solid fa-list-ul"></i> ${formatLabel}</div>
+      <div class="preview-text" id="prev-bib">${renderHTML(result.bib)}</div>
+    </div>`;
+  }
+
+  if (selectedFormat === 'chicago') {
+    if (result.fullNote) {
+      html += `<div class="preview-box footnote">
+        <div class="preview-label"><i class="fa-solid fa-superscript"></i> Full Footnote</div>
+        <div class="preview-text" id="prev-full-note">${renderHTML(result.fullNote)}</div>
+      </div>`;
+    }
+    if (result.shortNote) {
+      html += `<div class="preview-box short-note">
+        <div class="preview-label"><i class="fa-solid fa-scissors"></i> Shortened Footnote</div>
+        <div class="preview-text" id="prev-short-note">${renderHTML(result.shortNote)}</div>
+      </div>`;
+    }
+  } else if (result.intext) {
+    const intextLabel = selectedFormat === 'mla' ? 'In-Text Citation' : 'In-Text Citation (Parenthetical)';
+    html += `<div class="preview-box intext">
+      <div class="preview-label"><i class="fa-solid fa-quote-right"></i> ${intextLabel}</div>
+      <div class="preview-text" id="prev-intext">${renderHTML(result.intext)}</div>
+    </div>`;
+  }
+
+  html += `<div class="preview-actions">
+    <button class="btn btn-success" onclick="addCitation()">
+      <i class="fa-solid fa-plus"></i> Add to My Citations
+    </button>
+    <button class="btn btn-secondary" onclick="clearPreview()">
+      <i class="fa-regular fa-trash-can"></i> Discard
+    </button>
+  </div>`;
+
+  previewBody.innerHTML = html;
+  document.getElementById('step4-card').scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+function clearPreview() {
+  lastGenerated = null;
+  document.getElementById('preview-body').innerHTML = `
+    <div class="empty-state">
+      <i class="fa-regular fa-eye-slash"></i>
+      Fill in the form above and click "Generate Citation" to see your citation here.
+    </div>`;
+}
+
+// ─── Citations list ───────────────────────────────────────────────────────────
+function addCitation() {
+  if (!lastGenerated) return;
+  citations.push({ ...lastGenerated, id: Date.now() });
+  renderCitations();
+  showToast('Citation added!', 'success');
+  clearPreview();
+  document.getElementById('citations-card').scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+function deleteCitation(id) {
+  citations = citations.filter(c => c.id !== id);
+  renderCitations();
+  showToast('Citation removed.', '');
+}
+
+function sortCitations() {
+  citations.sort((a, b) => stripMarkup(a.bib || a.fullNote || '').localeCompare(stripMarkup(b.bib || b.fullNote || '')));
+  renderCitations();
+  showToast('Citations sorted A\u2013Z.', 'success');
+}
+
+function stripMarkup(s) {
+  return s.replace(/\[i\](.*?)\[\/i\]/g, '$1').replace(/<[^>]+>/g, '');
+}
+
+function renderCitations() {
+  const list = document.getElementById('citations-list');
+  const countEl = document.getElementById('citations-count');
+  const emptyState = document.getElementById('empty-state');
+  const exportSection = document.getElementById('export-section');
+  const sortBtn = document.getElementById('sort-btn');
+
+  countEl.textContent = citations.length + ' citation' + (citations.length === 1 ? '' : 's') + ' added';
+  sortBtn.style.display = citations.length > 1 ? '' : 'none';
+  exportSection.classList.toggle('hidden', citations.length === 0);
+
+  if (citations.length === 0) {
+    list.innerHTML = `<div class="empty-state" id="empty-state">
+      <i class="fa-regular fa-bookmark"></i>
+      No citations yet. Generate a citation above and click "Add to My Citations."
+    </div>`;
+    return;
+  }
+
+  list.innerHTML = citations.map((c, i) => {
+    const srcLabel = SOURCE_LABELS[c.source] || c.source;
+    let inner = '';
+
+    if (c.bib) {
+      inner += `<div class="citation-bib">${renderHTML(c.bib)}</div>`;
+    }
+    if (c.format !== 'chicago' && c.intext) {
+      inner += `<div class="citation-sub"><strong>In-text:</strong> ${renderHTML(c.intext)}</div>`;
+    }
+    if (c.format === 'chicago') {
+      if (c.fullNote) inner += `<div class="citation-sub"><strong>Full note:</strong> ${renderHTML(c.fullNote)}</div>`;
+      if (c.shortNote) inner += `<div class="citation-sub"><strong>Short note:</strong> ${renderHTML(c.shortNote)}</div>`;
+    }
+    if (c.note && !c.bib) {
+      inner += `<div class="citation-bib" style="color:var(--muted);font-style:italic">${c.note}</div>`;
+      if (c.intext) inner += `<div class="citation-sub"><strong>In-text:</strong> ${renderHTML(c.intext)}</div>`;
+    }
+
+    return `<div class="citation-item">
+      <div class="citation-item-header">
+        <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+          <span class="source-badge">${srcLabel}</span>
+          <span style="font-size:0.75rem;color:var(--muted);font-weight:600">${c.format.toUpperCase()}</span>
+        </div>
+        <button class="btn btn-secondary btn-sm" onclick="deleteCitation(${c.id})" title="Remove citation" style="color:var(--danger);border-color:var(--danger);white-space:nowrap">
+          <i class="fa-solid fa-trash"></i> Remove
+        </button>
+      </div>
+      ${inner}
+    </div>`;
+  }).join('');
+}
+
+// ─── Export ───────────────────────────────────────────────────────────────────
+function copyAll() {
+  if (!citations.length) { showToast('No citations to copy.', 'error'); return; }
+  const sorted = [...citations].sort((a, b) => stripMarkup(a.bib || '').localeCompare(stripMarkup(b.bib || '')));
+  const lines = sorted.map(c => {
+    let txt = stripMarkup(c.bib || '');
+    if (c.format === 'chicago') {
+      if (c.fullNote) txt += '\nFull note: ' + stripMarkup(c.fullNote);
+      if (c.shortNote) txt += '\nShort note: ' + stripMarkup(c.shortNote);
+    } else if (c.intext) {
+      txt += '\nIn-text: ' + stripMarkup(c.intext);
+    }
+    return txt;
+  });
+  navigator.clipboard.writeText(lines.join('\n\n')).then(() => showToast('Copied to clipboard!', 'success')).catch(() => showToast('Copy failed — please copy manually.', 'error'));
+}
+
+function textRunsFromMarkup(text, opts = {}) {
+  const { size = 24, font = 'Times New Roman', bold = false } = opts;
+  const runs = [];
+  const parts = text.split(/(\[i\].*?\[\/i\])/g);
+  for (const part of parts) {
+    if (part.startsWith('[i]') && part.endsWith('[/i]')) {
+      runs.push(new docx.TextRun({ text: part.slice(3, -4), italics: true, size, font, bold }));
+    } else if (part) {
+      runs.push(new docx.TextRun({ text: part, size, font, bold }));
+    }
+  }
+  return runs;
+}
+
+function makeBibParagraph(text) {
+  return new docx.Paragraph({
+    children: textRunsFromMarkup(text),
+    spacing: { line: 480, lineRule: docx.LineRuleType ? docx.LineRuleType.AUTO : 'auto', after: 0 },
+    indent: { left: 720, hanging: 720 },
+  });
+}
+
+async function exportWord() {
+  if (!citations.length) { showToast('No citations to export.', 'error'); return; }
+  if (typeof docx === 'undefined') { showToast('docx library not loaded. Check your internet connection.', 'error'); return; }
+
+  const fmt = citations[0].format;
+  const titleMap = { mla: 'Works Cited', apa: 'References', chicago: 'Bibliography' };
+  const docTitle = titleMap[fmt] || 'Works Cited';
+
+  const sorted = [...citations].sort((a, b) => stripMarkup(a.bib || '').localeCompare(stripMarkup(b.bib || '')));
+
+  const children = [];
+
+  // Title paragraph
+  children.push(new docx.Paragraph({
+    children: [new docx.TextRun({
+      text: docTitle,
+      size: 24,
+      font: 'Times New Roman',
+      bold: fmt === 'apa',
+    })],
+    alignment: docx.AlignmentType ? docx.AlignmentType.CENTER : 'center',
+    spacing: { line: 480, lineRule: 'auto', after: 0 },
+  }));
+
+  // Bib entries
+  sorted.forEach(c => {
+    if (c.bib) {
+      children.push(makeBibParagraph(c.bib));
+    } else if (c.note && !c.bib) {
+      // APA personal communication: no ref list entry, skip
+    }
+  });
+
+  // Chicago Notes section
+  if (fmt === 'chicago') {
+    const hasNotes = sorted.some(c => c.fullNote);
+    if (hasNotes) {
+      // Page break
+      children.push(new docx.Paragraph({
+        children: [new docx.TextRun({ text: '', size: 24, font: 'Times New Roman' })],
+        pageBreakBefore: true,
+      }));
+      // Notes title
+      children.push(new docx.Paragraph({
+        children: [new docx.TextRun({ text: 'Notes', size: 24, font: 'Times New Roman' })],
+        alignment: docx.AlignmentType ? docx.AlignmentType.CENTER : 'center',
+        spacing: { line: 480, lineRule: 'auto', after: 0 },
+      }));
+      // Numbered footnotes
+      sorted.filter(c => c.fullNote).forEach((c, i) => {
+        const noteText = (i + 1) + '. ' + c.fullNote;
+        children.push(makeBibParagraph(noteText));
+      });
+    }
+  }
+
+  const doc = new docx.Document({
+    sections: [{
+      properties: {
+        page: {
+          margin: { top: 1440, right: 1440, bottom: 1440, left: 1440 },
+        },
+      },
+      children,
+    }],
+  });
+
+  try {
+    const blob = await docx.Packer.toBlob(doc);
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = docTitle.replace(/\s+/g, '-') + '.docx';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    showToast('Word document downloaded!', 'success');
+  } catch (e) {
+    console.error(e);
+    showToast('Export failed: ' + e.message, 'error');
+  }
+}
+
+// ─── Toast ────────────────────────────────────────────────────────────────────
+function showToast(msg, type) {
+  const toast = document.getElementById('toast');
+  toast.textContent = msg;
+  toast.className = 'toast show' + (type ? ' ' + type : '');
+  setTimeout(() => toast.className = 'toast', 3000);
+}
+
+// ─── Init ─────────────────────────────────────────────────────────────────────
+renderCitations();
+updateExportLabel();
+</script>
+</body>
+</html>
