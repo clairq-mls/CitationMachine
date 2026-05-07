@@ -2179,8 +2179,8 @@ function textRunsFromMarkup(text, opts = {}) {
 function makeBibParagraph(text) {
   return new docx.Paragraph({
     children: textRunsFromMarkup(text),
-    spacing: { line: 480, lineRule: docx.LineRuleType ? docx.LineRuleType.AUTO : 'auto', after: 0 },
-    indent: { left: 720, hanging: 720 }, // hanging indent for Works Cited / References / Bibliography
+    spacing: { line: 480, lineRule: "auto", before: 0, after: 0 },
+    indent: { left: 720, hanging: 720 },
   });
 }
 
@@ -2188,7 +2188,7 @@ function makeNoteParagraph(text) {
   // Chicago footnotes/endnotes: first-line indent, runover lines flush left
   return new docx.Paragraph({
     children: textRunsFromMarkup(text),
-    spacing: { line: 480, lineRule: docx.LineRuleType ? docx.LineRuleType.AUTO : 'auto', after: 0 },
+    spacing: { line: 480, lineRule: "auto", before: 0, after: 0 },
     indent: { firstLine: 720 },
   });
 }
@@ -2213,8 +2213,8 @@ async function exportWord() {
       font: 'Times New Roman',
       bold: fmt === 'apa',
     })],
-    alignment: docx.AlignmentType ? docx.AlignmentType.CENTER : 'center',
-    spacing: { line: 480, lineRule: 'auto', after: 0 },
+    alignment: "center",
+    spacing: { line: 480, lineRule: "auto", before: 0, after: 0 },
   }));
 
   // Bib entries
@@ -2234,12 +2234,13 @@ async function exportWord() {
       children.push(new docx.Paragraph({
         children: [new docx.TextRun({ text: '', size: 24, font: 'Times New Roman' })],
         pageBreakBefore: true,
+        spacing: { before: 0, after: 0 },
       }));
       // Notes title
       children.push(new docx.Paragraph({
         children: [new docx.TextRun({ text: 'Notes', size: 24, font: 'Times New Roman' })],
-        alignment: docx.AlignmentType ? docx.AlignmentType.CENTER : 'center',
-        spacing: { line: 480, lineRule: 'auto', after: 0 },
+        alignment: "center",
+        spacing: { line: 480, lineRule: "auto", before: 0, after: 0 },
       }));
       // Numbered footnotes
       sorted.filter(c => c.fullNote).forEach((c, i) => {
