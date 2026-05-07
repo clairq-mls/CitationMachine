@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Citation Builder — MLA, APA & Chicago</title>
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
-<script src="https://unpkg.com/docx@8.2.0/build/index.js"></script>
+<script src="https://unpkg.com/docx@7.8.2/build/index.js"></script>
 <style>
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -221,6 +221,17 @@
   .preview-box.intext { background: #eff6ff; border: 1px solid #bfdbfe; }
   .preview-box.footnote { background: #fdf4ff; border: 1px solid #e9d5ff; }
   .preview-box.short-note { background: #fffbeb; border: 1px solid #fde68a; }
+  /* Hanging indent for bibliography/works cited preview */
+  .preview-box.bib .preview-text {
+    padding-left: 2em;
+    text-indent: -2em;
+  }
+  /* First-line indent for Chicago footnote preview (opposite of hanging) */
+  .preview-box.footnote .preview-text,
+  .preview-box.short-note .preview-text {
+    padding-left: 1em;
+    text-indent: 0;
+  }
   .preview-label {
     font-size: 0.75rem;
     font-weight: 700;
@@ -279,7 +290,7 @@
     color: var(--primary);
     flex-shrink: 0;
   }
-  .citation-bib { font-size: 0.88rem; line-height: 1.65; }
+  .citation-bib { font-size: 0.88rem; line-height: 1.65; padding-left: 2em; text-indent: -2em; }
   .citation-sub {
     font-size: 0.8rem;
     color: var(--muted);
@@ -2169,7 +2180,16 @@ function makeBibParagraph(text) {
   return new docx.Paragraph({
     children: textRunsFromMarkup(text),
     spacing: { line: 480, lineRule: docx.LineRuleType ? docx.LineRuleType.AUTO : 'auto', after: 0 },
-    indent: { left: 720, hanging: 720 },
+    indent: { left: 720, hanging: 720 }, // hanging indent for Works Cited / References / Bibliography
+  });
+}
+
+function makeNoteParagraph(text) {
+  // Chicago footnotes/endnotes: first-line indent, runover lines flush left
+  return new docx.Paragraph({
+    children: textRunsFromMarkup(text),
+    spacing: { line: 480, lineRule: docx.LineRuleType ? docx.LineRuleType.AUTO : 'auto', after: 0 },
+    indent: { firstLine: 720 },
   });
 }
 
@@ -2224,7 +2244,7 @@ async function exportWord() {
       // Numbered footnotes
       sorted.filter(c => c.fullNote).forEach((c, i) => {
         const noteText = (i + 1) + '. ' + c.fullNote;
-        children.push(makeBibParagraph(noteText));
+        children.push(makeNoteParagraph(noteText));
       });
     }
   }
